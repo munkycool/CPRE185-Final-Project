@@ -11,7 +11,7 @@
 
 void exit_program() {
     int ch = getch();
-    if (ch == 'q' || ch == 'Q') {
+    if (ch == 27) {
         endwin();
         exit(0);
     }

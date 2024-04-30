@@ -24,6 +24,8 @@ int main () {
     time_t start_time1, start_time2, end_time;
     int i, j, k, n = 0;
     char input[100];
+    int input_index = 0;
+    int ch;
 
 // read the words from the wordlist.txt file
 
@@ -51,7 +53,6 @@ int main () {
     noecho();
     keypad(stdscr, TRUE);
     nodelay(stdscr, TRUE);
-    curs_set(0);
 
     for (i = 0; i < 10; i++) {
         cur_word[i] = calloc(1, MAX_WORD_LENGTH + 1);
@@ -66,35 +67,45 @@ int main () {
             if (i == 10) {
                 i = 0;
             }
-            if (cur_word[i][0] != '\0') {
-                continue;
-            }
             random_number = rand() % MAX_WORDS + 1;
             start_time1 = time(NULL);
             strcpy(cur_word[i], words[random_number]);
             mvprintw(y_axis[i], x_axis[i], cur_word[i]);
-            x_axis[i] += 20 + x_axis[i-1];
+            x_axis[i] += 15 + x_axis[i-1];
             i++;
             refresh();
         }
-        if (time(NULL) - start_time2 >= 2) {
-            int word_to_move = rand() % 10;
-            start_time2 = time(NULL);
-            oob(y_axis[word_to_move], x_axis[word_to_move]);
-            y_axis[word_to_move]++;
-            mvprintw(y_axis[word_to_move], x_axis[word_to_move], "%s", cur_word[word_to_move]);
-            refresh();
-        }
 
-        for (j = 0; j < 10; j++) {
-            scanw("%s", input);
-            if (strcmp(input, cur_word[j]) == 0) {
-                y_axis[j] = 0;
-                x_axis[j] = rand() % 300;
-                cur_word[j][0] = '\0';
+/*
+        if (time(NULL) - start_time2 >= 2) {
+            for (j = 0; j < 10; j++) {
+                if (cur_word[j][0] == '\0') {
+                    continue;
+                }
+                y_axis[j]++;
                 mvprintw(y_axis[j], x_axis[j], "%s", cur_word[j]);
                 refresh();
             }
         }
+*/
+        for (j = 0; j < 10; j++) {
+            ch = getch();
+            if (ch != ERR) {  // if a key was pressed
+                if (ch == '\n') {  // if the key was Enter
+                    input[input_index] = '\0';  // null-terminate the string
+                    // ... (compare input to cur_word[j] and update as before)
+                    input_index = 0;  // reset the input index for the next word
+                } else if (ch == KEY_BACKSPACE && input_index > 0) {  // if the key was Backspace
+                    input_index--;  // decrement the input index
+                    input[input_index] = '\0';  // null-terminate the string
+                } else if (input_index < MAX_WORD_LENGTH) {  // if there's room for more characters
+                    input[input_index] = ch;  // append the character to the string
+                    input_index++;  // increment the input index
+                }
+                mvprintw(LINES - 1, 0, "%s", input);  // display the input at the bottom of the screen
+                clrtoeol();  // clear the rest of the line
+                refresh();
+            }
+}
 }
 }
