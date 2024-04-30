@@ -14,7 +14,7 @@ Copyright (c) 2024 Artemis Ulysses and Ian Anton
 #include <ncurses.h>
 
 int main () {
-
+// Hello
     char *words[MAX_WORDS];
     int num_words = 0;
     srand(time(NULL));
