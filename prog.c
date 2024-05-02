@@ -12,6 +12,7 @@ Copyright (c) 2024 Artemis Ulysses and Ian Anton
 #include <math.h>
 #include "read-wordlist.h"
 #include <ncurses.h>
+#include <Python.h>
 
 int main () {
 // Hello
