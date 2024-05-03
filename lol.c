@@ -97,6 +97,7 @@ int main() {
         refresh();
 
         // Get user input
+        // Get user input
         char userInput[MAX_WORD_LENGTH];
         mvprintw(10, 0, "Enter a word: ");
         getstr(userInput);
@@ -104,9 +105,17 @@ int main() {
         // Clear word if user input matches
         for (int i = 0; i < MAX_WORDS; i++) {
             if (strcmp(userInput, curWord[i]) == 0) {
+                // Clear the word from the screen
                 for (int j = 0; j < strlen(userInput); j++) {
                     mvaddch(yAxis[i], positions[i] + j, ' ');
                 }
+
+                // Select a new random word
+                int randIndex = rand() % wordCount;
+                strcpy(curWord[i], words[randIndex]);
+
+                // Reset the position of the word
+                yAxis[i] = 0;
             }
         }
 
