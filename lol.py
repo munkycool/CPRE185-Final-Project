@@ -16,6 +16,12 @@ def oob(y, x):
         x = 200
     return y, x
 
+def adjust_positions(curWord, positions, width, yAxis):
+    for i in range(len(curWord)):
+        if positions[i] + len(curWord[i]) > width:
+            positions[i] = width - len(curWord[i])
+            yAxis[i] = 0
+
 def main(): 
     stdscr = curses.initscr()
     stdscr.clear()
@@ -51,6 +57,7 @@ def main():
     stdscr.addstr(0,0, "Choose a difficulty level (1-10): ")
     difficulty = int(stdscr.getstr().decode('utf-8'))
     stdscr.clear()
+    height, width = stdscr.getmaxyx()
     
     while True:
         positions = [20*i for i in range(len(curWord))]  # Reset positions
@@ -86,8 +93,11 @@ def main():
         stdscr.refresh()
         
         # Get user input as a string
-        stdscr.addstr(10, 0, "Enter a word: ")
+        stdscr.addstr(height-1, 0, "Enter a word: ")
         userInput = stdscr.getstr().decode('utf-8')
+        
+        if userInput == ':q':
+            break
 
         if userInput in curWord:
             index = curWord.index(userInput)
@@ -96,12 +106,18 @@ def main():
             yAxis.pop(index)
             positions.pop(index)
             
+            
             # Only add a new random word if there are less than 10 words
             if len(curWord) < 10:
                 newWord = random.choice(words)
                 curWord.append(newWord)
                 yAxis.append(0)  # New word starts at the top
                 positions.append(20 * (len(curWord) - 1))  # Position for the new word
+            elif len(curWord) >= 10:
+                newWord = random.choice(words)
+                curWord.append(newWord)
+                yAxis.append(0)
+                positions.append(20 * (len(curWord) - 1))
             
             # If more than 5 seconds have passed and there are less than 10 words, add another new word
             if time.time() - start_time > 5 and len(curWord) < 10:
@@ -114,7 +130,9 @@ def main():
         stdscr.getch()  # Wait for user input before continuing
 
         stdscr.clear()
-        
+    
+    stdscr.clear()
+    stdscr.addstr(1, 0, "Time taken: {:.2f} seconds".format(time.time() - start_time))    
     stdscr.addstr(0, 0, "Game Over!")
     stdscr.refresh()
     time.sleep(5)
