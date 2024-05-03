@@ -1,131 +1,216 @@
-#include <ncurses.h>
+#include <unistd.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <time.h>
+#include <string.h>
+#include <ncurses.h>
 
-#define MAX_WORDS 10
-#define MAX_WORD_LENGTH 50
-#define MAX_LINE_LENGTH 200
+#define MAX_WORDS 7775
+#define MAX_WORD_LENGTH 20
+
+void adjust_positions(char **curWord, int *positions, int width, int *yAxis, int num_words) {
+    for (int i = 0; i < num_words; i++) {
+        if (positions[i] + strlen(curWord[i]) > width) {
+            positions[i] = width - strlen(curWord[i]);
+            yAxis[i] = 0;
+        }
+    }
+}
+
+int check_overlap(int new_position, int *existing_positions, int *word_lengths, int num_words, int word_length) {
+    for (int i = 0; i < num_words; i++) {
+        if ((existing_positions[i] - 1) <= new_position && new_position < (existing_positions[i] + word_lengths[i] + 1)) {
+            return 1;
+        }
+        if ((existing_positions[i] - 1) < (new_position + word_length + 1) && (new_position + word_length + 1) <= (existing_positions[i] + word_lengths[i] + 1)) {
+            return 1;
+        }
+    }
+    return 0;
+}
 
 int main() {
     initscr();
-    clear();
     curs_set(0);
-
-    FILE *file = fopen("wordlist.txt", "r");
-    if (file == NULL) {
+    
+    FILE *fp = fopen("wordlist.txt", "r");
+    if (fp == NULL) {
         endwin();
+        printf("Error opening wordlist.txt\n");
         return 1;
     }
-
-    // Count the number of lines (words) in the file
-    int wordCount = 0;
-    char ch;
-    while (!feof(file)) {
-        ch = fgetc(file);
-        if (ch == '\n') {
-            wordCount++;
-        }
+    
+    char word[MAX_WORD_LENGTH];
+    char *words[MAX_WORDS];
+    int num_words = 0;
+    
+    while (fscanf(fp, "%s", word) != EOF) {
+        words[num_words] = malloc(strlen(word) + 1);
+        strcpy(words[num_words], word);
+        num_words++;
     }
-
-    // Allocate memory for the words array
-    char (*words)[MAX_WORD_LENGTH] = malloc(wordCount * sizeof(*words));
-    if (words == NULL) {
-        endwin();
-        return 1;
-    }
-
-    // Go back to the start of the file
-    rewind(file);
-
-    // Read words from file
-    char line[MAX_LINE_LENGTH];
-    int i = 0;
-    while (fgets(line, sizeof(line), file)) {
-        strcpy(words[i], line);
-        i++;
-    }
-    fclose(file);
-
-    int yAxis[MAX_WORDS];
+    
+    fclose(fp);
+    
+    char *curWord[MAX_WORDS];
     int positions[MAX_WORDS];
-    char curWord[MAX_WORDS][MAX_WORD_LENGTH];
-
-    // Initialize yAxis and positions
-    for (int i = 0; i < MAX_WORDS; i++) {
-        yAxis[i] = 0;
-        positions[i] = 20 * i;
-    }
-
-    // Select random words
+    int yAxis[MAX_WORDS];
+    int word_lengths[MAX_WORDS];
+    
     srand(time(NULL));
-    for (int i = 0; i < MAX_WORDS; i++) {
-        int randIndex = rand() % wordCount;
-        strcpy(curWord[i], words[randIndex]);
-    }
-
+    int random_index = rand() % num_words;
+    curWord[0] = words[random_index];
+    positions[0] = rand() % (COLS - strlen(curWord[0]));
+    yAxis[0] = 0;
+    word_lengths[0] = strlen(curWord[0]);
+    
     time_t start_time = time(NULL);
-
+    
+    mvprintw(0, 0, "Do you want to change the wordlist? (y/n): ");
+    refresh();
+    char change_wordlist = getch();
+    
+    if (change_wordlist == 'y') {
+        endwin();
+        system("open -a CotEditor wordlist.txt");
+        initscr();
+    }
+    
+    clear();
+    mvprintw(0, 0, "Choose a difficulty level (1-10): ");
+    refresh();
+    int difficulty;
+    scanw("%d", &difficulty);
+    clear();
+    
+    int num_cur_words = 1;
+    
     while (1) {
-        // Reset positions
-        for (int i = 0; i < MAX_WORDS; i++) {
-            positions[i] = 20 * i;
+        int existing_positions[MAX_WORDS];
+        int existing_word_lengths[MAX_WORDS];
+        
+        for (int i = 0; i < num_cur_words; i++) {
+            existing_positions[i] = positions[i];
+            existing_word_lengths[i] = word_lengths[i];
         }
-
-        // Move a random word one position down
-        int randIndex = rand() % MAX_WORDS;
-        if (time(NULL) - start_time > 5) {
-            yAxis[randIndex] += 1;
+        
+        for (int i = 0; i < num_cur_words; i++) {
+            int new_position = rand() % (COLS - word_lengths[i]);
+            while (check_overlap(new_position, existing_positions, existing_word_lengths, num_cur_words, word_lengths[i])) {
+                new_position = rand() % (COLS - word_lengths[i]);
+            }
+            positions[i] = new_position;
+            existing_positions[i] = new_position;
         }
-
-        // Check if any word has reached the bottom of the screen
-        int height, width;
-        getmaxyx(stdscr, height, width);
-        for (int i = 0; i < MAX_WORDS; i++) {
-            if (yAxis[i] >= height) {
-                endwin();
-                free(words);
-                return 0;
+        
+        int randIndices[MAX_WORDS];
+        int num_rand_indices = (num_cur_words >= difficulty) ? difficulty : num_cur_words;
+        for (int i = 0; i < num_rand_indices; i++) {
+            randIndices[i] = rand() % num_cur_words;
+        }
+        
+        if (difftime(time(NULL), start_time) > 30) {
+            difficulty = 20;
+        }
+        
+        for (int i = 0; i < num_rand_indices; i++) {
+            int randIndex = randIndices[i];
+            if (difftime(time(NULL), start_time) > 5) {
+                yAxis[randIndex] += 2;
+            } else if (difftime(time(NULL), start_time) > 10) {
+                yAxis[randIndex] += 4;
+                yAxis[randIndex] += 4;
+            } else if (difftime(time(NULL), start_time) > 15) {
+                yAxis[randIndex] += 6;
+                yAxis[randIndex] += 6;
+            } else if (difftime(time(NULL), start_time) > 20) {
+                yAxis[randIndex] += 8;
+                yAxis[randIndex] += 8;
+            } else if (difftime(time(NULL), start_time) > 25) {
+                yAxis[randIndex] += 10;
+                yAxis[randIndex] += 10;
+            } else if (difftime(time(NULL), start_time) > 30) {
+                yAxis[randIndex] += 12;
+                yAxis[randIndex] += 12;
             }
         }
-
-        // Display words
-        for (int i = 0; i < MAX_WORDS; i++) {
-            mvprintw(yAxis[i], positions[i], curWord[i]);
+        
+        int game_over = 0;
+        for (int i = 0; i < num_cur_words; i++) {
+            if (yAxis[i] >= LINES) {
+                game_over = 1;
+                break;
+            }
         }
-
+        
+        if (game_over) {
+            break;
+        }
+        
+        for (int i = 0; i < num_cur_words; i++) {
+            mvprintw(yAxis[i], positions[i], "%s", curWord[i]);
+        }
+        
         refresh();
-
-        // Get user input
-        // Get user input
-        char userInput[MAX_WORD_LENGTH];
-        mvprintw(10, 0, "Enter a word: ");
-        getstr(userInput);
-
-        // Clear word if user input matches
-        for (int i = 0; i < MAX_WORDS; i++) {
-            if (strcmp(userInput, curWord[i]) == 0) {
-                // Clear the word from the screen
-                for (int j = 0; j < strlen(userInput); j++) {
-                    mvaddch(yAxis[i], positions[i] + j, ' ');
+        
+        mvprintw(LINES - 1, 0, "Enter a word: ");
+        refresh();
+        char user_input[MAX_WORD_LENGTH];
+        getstr(user_input);
+        
+        if (strcmp(user_input, ":q") == 0) {
+            break;
+        }
+        
+        int found = 0;
+        for (int i = 0; i < num_cur_words; i++) {
+            if (strcmp(user_input, curWord[i]) == 0) {
+                mvprintw(yAxis[i], positions[i], "%*s", word_lengths[i], " ");
+                free(curWord[i]);
+                for (int j = i; j < num_cur_words - 1; j++) {
+                    curWord[j] = curWord[j + 1];
+                    positions[j] = positions[j + 1];
+                    yAxis[j] = yAxis[j + 1];
+                    word_lengths[j] = word_lengths[j + 1];
                 }
-
-                // Select a new random word
-                int randIndex = rand() % wordCount;
-                strcpy(curWord[i], words[randIndex]);
-
-                // Reset the position of the word
-                yAxis[i] = 0;
+                num_cur_words--;
+                found = 1;
+                break;
             }
         }
-
-        refresh();
-        getch();  // Wait for user input before continuing
-
+        
+        if (found) {
+            if (num_cur_words < 10) {
+                random_index = rand() % num_words;
+                curWord[num_cur_words] = words[random_index];
+                positions[num_cur_words] = 20 * num_cur_words;
+                yAxis[num_cur_words] = 0;
+                word_lengths[num_cur_words] = strlen(curWord[num_cur_words]);
+                num_cur_words++;
+            }
+            
+            random_index = rand() % num_words;
+            curWord[num_cur_words] = words[random_index];
+            positions[num_cur_words] = rand() % (COLS - strlen(curWord[num_cur_words]));
+            yAxis[num_cur_words] = 0;
+            word_lengths[num_cur_words] = strlen(curWord[num_cur_words]);
+            num_cur_words++;
+        }
+        
+        getch();
         clear();
     }
-
+    
+    clear();
+    mvprintw(1, 0, "Time taken: %.2f seconds", difftime(time(NULL), start_time));
+    mvprintw(0, 0, "Game Over!");
+    refresh();
+    sleep(5);
     endwin();
-    free(words);
+    
+    for (int i = 0; i < num_words; i++) {
+        free(words[i]);
+    }
+    
     return 0;
 }
