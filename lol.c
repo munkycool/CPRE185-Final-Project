@@ -92,14 +92,35 @@ int main() {
     
     time_t start_time = time(NULL);
     
+    changeisbeautiful:
     mvprintw(0, 0, "Do you want to change the wordlist? (y/n): ");
     refresh();
     char change_wordlist = getch();
     
+    /*
     if (change_wordlist == 'y') {
         endwin();
         system("open -a CotEditor wordlist.txt");
         initscr();
+    }
+    */
+
+    if (change_wordlist == 'y') {
+        char user_input[256]; // Assuming a max word length of 255 characters
+        mvprintw(2, 0, "Enter new word to append: ");
+        refresh();
+        getnstr(user_input, 255); // Read input from user, with a maximum of 255 characters
+
+        // Open the file in append mode
+        FILE *fp = fopen("wordlist.txt", "a");
+        if (fp != NULL) {
+            fprintf(fp, "%s\n", user_input); // Append the new word to the file, followed by a newline
+            fclose(fp); // Close the file
+        } else {
+            mvprintw(3, 0, "Failed to open wordlist.txt for appending.");
+        }
+        clear(); // Clear the screen after appending
+        goto changeisbeautiful;
     }
     
     clear();
