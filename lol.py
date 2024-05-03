@@ -3,6 +3,7 @@ import time
 import math
 import curses 
 import subprocess
+from PIL import Image
 
 def oob(y, x):
     if y < 0:
@@ -42,24 +43,37 @@ def main():
     
     if change_wordlist == 'y':
         subprocess.run(['nano', 'wordlist.txt'])
+        stdscr.clear()
     elif change_wordlist == 'n':
+        stdscr.clear()
         pass
+    
+    stdscr.addstr(0,0, "Choose a difficulty level (1-10): ")
+    difficulty = int(stdscr.getstr().decode('utf-8'))
+    stdscr.clear()
     
     while True:
         positions = [20*i for i in range(len(curWord))]  # Reset positions
 
         # Move a random word one position down
-        randIndex = random.randint(0, len(curWord) - 1)
-        if time.time() - start_time > 5:
-            yAxis[randIndex] += 1
-        elif time.time() - start_time > 10:
-            yAxis[randIndex] += 2
-        elif time.time() - start_time > 15:
-            yAxis[randIndex] += 3
-        elif time.time() - start_time > 20:
-            yAxis[randIndex] += 4
-        elif time.time() - start_time > 25:
-            yAxis[randIndex] += 5
+        randIndices = random.sample(range(len(curWord)), len(curWord))
+        if len(curWord) >= difficulty:
+            randIndices = random.sample(range(len(curWord)), difficulty)
+        for randIndex in randIndices:
+            if time.time() - start_time > 5:
+                yAxis[randIndex] += 2
+            elif time.time() - start_time > 10:
+                yAxis[randIndex] += 4
+                yAxis[randIndex] += 4
+            elif time.time() - start_time > 15:
+                yAxis[randIndex] += 6
+                yAxis[randIndex] += 6
+            elif time.time() - start_time > 20:
+                yAxis[randIndex] += 8
+                yAxis[randIndex] += 8
+            elif time.time() - start_time > 25:
+                yAxis[randIndex] += 10
+                yAxis[randIndex] += 10
 
         # Check if any word has reached the bottom of the screen
         height, width = stdscr.getmaxyx()
@@ -101,6 +115,10 @@ def main():
 
         stdscr.clear()
         
+    stdscr.addstr(0, 0, "Game Over!")
+    stdscr.refresh()
+    time.sleep(5)
+    curses.endwin() 
     
 main()
         
