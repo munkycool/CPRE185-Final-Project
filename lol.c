@@ -39,17 +39,43 @@ int main() {
         printf("Error opening wordlist.txt\n");
         return 1;
     }
-    
-    char word[MAX_WORD_LENGTH];
-    char *words[MAX_WORDS];
+
+    // First pass to count the number of words
     int num_words = 0;
-    
-    while (fscanf(fp, "%s", word) != EOF) {
-        words[num_words] = malloc(strlen(word) + 1);
-        strcpy(words[num_words], word);
+    char temp_word[MAX_WORD_LENGTH];
+    while (fscanf(fp, "%s", temp_word) != EOF) {
         num_words++;
     }
-    
+    rewind(fp); // Go back to the start of the file
+
+    // Allocate memory for the words array based on the number of words
+    char **words = malloc(num_words * sizeof(char*));
+    if (words == NULL) {
+        endwin();
+        printf("Memory allocation failed\n");
+        fclose(fp);
+        return 1;
+    }
+
+    // Second pass to actually store the words
+    int index = 0;
+    while (fscanf(fp, "%s", temp_word) != EOF && index < num_words) {
+        words[index] = malloc(strlen(temp_word) + 1);
+        if (words[index] == NULL) {
+            endwin();
+            printf("Memory allocation failed for word %d\n", index);
+            // Free previously allocated memory
+            for (int i = 0; i < index; i++) {
+                free(words[i]);
+            }
+            free(words);
+            fclose(fp);
+            return 1;
+        }
+        strcpy(words[index], temp_word);
+        index++;
+    }
+
     fclose(fp);
     
     char *curWord[MAX_WORDS];
