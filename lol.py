@@ -5,6 +5,7 @@ import curses
 import subprocess
 from PIL import Image
 
+# Check if out of bounds - this is used nowhere lol
 def oob(y, x):
     if y < 0:
         y = 0
@@ -21,7 +22,8 @@ def adjust_positions(curWord, positions, width, yAxis):
         if positions[i] + len(curWord[i]) > width:
             positions[i] = width - len(curWord[i])
             yAxis[i] = 0
-            
+
+# Check if the new position overlaps with any existing positions
 def check_overlap(new_position, existing_positions, word_length):
     """
     Check if the new position overlaps with any existing positions, ensuring there's at least
@@ -38,11 +40,13 @@ def check_overlap(new_position, existing_positions, word_length):
             return True
     return False
 
+# Main fucntion
 def main(): 
     stdscr = curses.initscr()
     stdscr.clear()
     curses.curs_set(0)
     
+    # Open wordlist.txt and read the words into a list
     with open('wordlist.txt', 'r') as f:
         words = f.readlines()
     
@@ -50,12 +54,15 @@ def main():
     curWord = random.sample(words, 1)
     yAxis = [0 for i in range(10)]
     
+    # Get the start time
     start_time = time.time()
     
+    # Check if the user wants to change the wordlist
     stdscr.addstr(0,0, "Do you want to change the wordlist? (y/n): ")
     stdscr.refresh()
     change_wordlist = stdscr.getstr().decode('utf-8')
     
+    # If the user wants to change the wordlist, open the list in CotEditor
     if change_wordlist == 'y':
         curses.endwin()  # Temporarily end curses to use the terminal normally
         subprocess.run(['open', '-a', 'CotEditor', 'wordlist.txt'])
@@ -63,24 +70,21 @@ def main():
     elif change_wordlist == 'n':
         pass
     
-    if change_wordlist == 'y':
-        subprocess.run(['nano', 'wordlist.txt'])
-        stdscr.clear()
-    elif change_wordlist == 'n':
-        stdscr.clear()
-        pass
-    
+    stdscr.clear()
+    # Get the difficulty level from the user
     stdscr.addstr(0,0, "Choose a difficulty level (1-10): ")
     difficulty = int(stdscr.getstr().decode('utf-8'))
     stdscr.clear()
     height, width = stdscr.getmaxyx()
     
+    # Main game loop
     while True:
         positions = [random.randint(0, width - len(curWord[i])) for i in range(len(curWord))]  # Adjusted line
         
         # Adjust the loop where positions are assigned
         existing_positions = [(positions[i], len(curWord[i])) for i in range(len(curWord))]
 
+        # Check if the new position of the word overlaps with the position of any existing words
         for i in range(len(curWord)):
             new_position = random.randint(0, width - len(curWord[i]))
             # Keep generating a new position until it doesn't overlap
@@ -93,6 +97,10 @@ def main():
         randIndices = random.sample(range(len(curWord)), len(curWord))
         if len(curWord) >= difficulty:
             randIndices = random.sample(range(len(curWord)), difficulty)
+        # make it so that it won't reach the state where the program fails, because the user will be fucked before then
+        if time.time() -start_time > 30:
+            difficulty = 20
+        # Increase the difficulty after a certain length of time by increasing the distance the words move down each iteration
         for randIndex in randIndices:
             if time.time() - start_time > 5:
                 yAxis[randIndex] += 2
@@ -117,6 +125,7 @@ def main():
         if any(y >= height for y in yAxis):
             break
 
+        # Print the words on the screen
         for i, word in enumerate(curWord):
             stdscr.addstr(yAxis[i], positions[i], word)
         
@@ -126,9 +135,11 @@ def main():
         stdscr.addstr(height-1, 0, "Enter a word: ")
         userInput = stdscr.getstr().decode('utf-8')
         
+        # Vim keybinds lol
         if userInput == ':q':
             break
 
+        # Check if the user input matches any of the words on the screen
         if userInput in curWord:
             index = curWord.index(userInput)
             stdscr.addstr(yAxis[index], positions[index], ' ' * len(userInput))  # Clear the word
@@ -141,13 +152,15 @@ def main():
 
 
             
-            # If more than 5 seconds have passed and there are less than 10 words, add another new word
+            # If more than 5 seconds have passed and there are less than 25 words, add another new word
+            # So the maximum number of words on the screen is 25
             if time.time() - start_time > 5 and len(curWord) < 10:
                 additionalWord = random.choice(words)
                 curWord.append(additionalWord)
                 yAxis.append(0)  # Additional new word also starts at the top
                 positions.append(20 * (len(curWord) - 1))  # Position for the additional new word
-                
+         
+            # if the user input matches a word, add a new word       
             newWord = random.choice(words)
             curWord.append(newWord)
             yAxis.append(0)
@@ -158,13 +171,17 @@ def main():
 
         stdscr.clear()
     
+    # Clear the screen after the game ends
     stdscr.clear()
+    # Print the time taken, and print game over
     stdscr.addstr(1, 0, "Time taken: {:.2f} seconds".format(time.time() - start_time))    
     stdscr.addstr(0, 0, "Game Over!")
     stdscr.refresh()
+    # Sleep for 5 seconds before closing the window, ending the program for good :)
     time.sleep(5)
     curses.endwin() 
     
+# Run the main function
 main()
         
         
