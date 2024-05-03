@@ -21,6 +21,22 @@ def adjust_positions(curWord, positions, width, yAxis):
         if positions[i] + len(curWord[i]) > width:
             positions[i] = width - len(curWord[i])
             yAxis[i] = 0
+            
+def check_overlap(new_position, existing_positions, word_length):
+    """
+    Check if the new position overlaps with any existing positions, ensuring there's at least
+    one space between words.
+    
+    :param new_position: The proposed x-coordinate for the new word.
+    :param existing_positions: List of tuples containing the positions and lengths of existing words.
+    :param word_length: The length of the new word.
+    :return: True if there is an overlap, False otherwise.
+    """
+    for pos, length in existing_positions:
+        # Expand the range by 1 on both sides to ensure a space between words
+        if (pos - 1) <= new_position < (pos + length + 1) or (pos - 1) < (new_position + word_length + 1) <= (pos + length + 1):
+            return True
+    return False
 
 def main(): 
     stdscr = curses.initscr()
@@ -60,8 +76,19 @@ def main():
     height, width = stdscr.getmaxyx()
     
     while True:
-        positions = [20*i for i in range(len(curWord))]  # Reset positions
+        positions = [random.randint(0, width - len(curWord[i])) for i in range(len(curWord))]  # Adjusted line
+        
+        # Adjust the loop where positions are assigned
+        existing_positions = [(positions[i], len(curWord[i])) for i in range(len(curWord))]
 
+        for i in range(len(curWord)):
+            new_position = random.randint(0, width - len(curWord[i]))
+            # Keep generating a new position until it doesn't overlap
+            while check_overlap(new_position, existing_positions, len(curWord[i])):
+                new_position = random.randint(0, width - len(curWord[i]))
+            positions[i] = new_position
+            existing_positions[i] = (new_position, len(curWord[i]))  # Update the existing positions list
+    
         # Move a random word one position down
         randIndices = random.sample(range(len(curWord)), len(curWord))
         if len(curWord) >= difficulty:
@@ -81,6 +108,9 @@ def main():
             elif time.time() - start_time > 25:
                 yAxis[randIndex] += 10
                 yAxis[randIndex] += 10
+            elif time.time() - start_time > 30:
+                yAxis[randIndex] += 12
+                yAxis[randIndex] += 12
 
         # Check if any word has reached the bottom of the screen
         height, width = stdscr.getmaxyx()
@@ -108,16 +138,8 @@ def main():
             
             
             # Only add a new random word if there are less than 10 words
-            if len(curWord) < 10:
-                newWord = random.choice(words)
-                curWord.append(newWord)
-                yAxis.append(0)  # New word starts at the top
-                positions.append(20 * (len(curWord) - 1))  # Position for the new word
-            elif len(curWord) >= 10:
-                newWord = random.choice(words)
-                curWord.append(newWord)
-                yAxis.append(0)
-                positions.append(20 * (len(curWord) - 1))
+
+
             
             # If more than 5 seconds have passed and there are less than 10 words, add another new word
             if time.time() - start_time > 5 and len(curWord) < 10:
@@ -125,6 +147,11 @@ def main():
                 curWord.append(additionalWord)
                 yAxis.append(0)  # Additional new word also starts at the top
                 positions.append(20 * (len(curWord) - 1))  # Position for the additional new word
+                
+            newWord = random.choice(words)
+            curWord.append(newWord)
+            yAxis.append(0)
+            positions.append(random.randint(0,width-len(newWord)))
 
         stdscr.refresh()
         stdscr.getch()  # Wait for user input before continuing
